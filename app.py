@@ -23,8 +23,9 @@ def download_audio(url):
     # Download audio using yt-dlp
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=True)
-        audio_file_path = ydl.prepare_filename(info_dict)
-        return audio_file_path
+        audio_file = ydl.prepare_filename(info_dict)
+        audio_file = os.path.splitext(audio_file)[0] + '.mp3'
+        return audio_file
 
 # Define an HTTP route to handle the request and return the audio file
 @app.route('/download-audio', methods=['GET'])
