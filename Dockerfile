@@ -10,6 +10,9 @@ RUN apt-get update && \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
+# Create temp_audio directory and set permissions
+RUN mkdir -p /app/temp_audio && chmod 777 /app/temp_audio
+
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

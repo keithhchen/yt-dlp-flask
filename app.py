@@ -14,7 +14,7 @@ def download_audio(url):
         'format': 'bestaudio/best',  # Download the best audio quality
         'outtmpl': os.path.join(TEMP_DIR, '%(id)s.%(ext)s'),  # Save to the temporary directory
         'postprocessors': [{
-            'key': 'FFmpegAudioConvertor',  # Convert to mp3 or other formats if needed
+            'key': 'FFmpegExtractAudio',  # Convert to mp3 or other formats if needed
             'preferredcodec': 'mp3',
             'preferredquality': '192',  # You can adjust the quality
         }],
