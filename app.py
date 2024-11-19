@@ -14,8 +14,8 @@ def download_audio(url):
         'format': 'bestaudio/best',  # Download the best audio quality
         'outtmpl': os.path.join(TEMP_DIR, '%(id)s.%(ext)s'),  # Save to the temporary directory
         'postprocessors': [{
-            'key': 'FFmpegExtractAudio',  # Convert to mp3 or other formats if needed
-            'preferredcodec': 'mp3',
+            'key': 'FFmpegExtractAudio',  # Convert to wav or other formats if needed
+            'preferredcodec': 'wav',
             'preferredquality': '192',  # You can adjust the quality
         }],
     }
@@ -24,7 +24,7 @@ def download_audio(url):
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=True)
         audio_file = ydl.prepare_filename(info_dict)
-        audio_file = os.path.splitext(audio_file)[0] + '.mp3'
+        audio_file = os.path.splitext(audio_file)[0] + '.wav'
         return audio_file
 
 # Define an HTTP route to handle the request and return the audio file
