@@ -89,8 +89,16 @@ def download_audio_endpoint():
         signed_url = download_audio(video_url)
         if not signed_url:
             return {"error": "Failed to generate download URL"}, 500
+        
+        # Extract the blob name from the signed URL
+        # The signed URL contains the bucket name and blob path
+        blob_name = signed_url.split('/')[-1].split('?')[0]
+        gcs_uri = f'gs://{BUCKET_NAME}/audio/{blob_name}'
             
-        return {"download_url": signed_url}
+        return {
+            "download_url": signed_url,
+            "gcs_uri": gcs_uri
+        }
     
     except Exception as e:
         current_app.logger.error(f"Endpoint error: {str(e)}")
