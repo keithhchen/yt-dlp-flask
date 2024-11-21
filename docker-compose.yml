@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        FLASK_ENV: production
+    ports:
+      - "5000:5000"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
+
+  app_dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        FLASK_ENV: development
+    ports:
+      - "5001:5000"
+    volumes:
+      - .:/app # Mount the current directory for hot reloading in development
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1

@@ -11,6 +11,11 @@ BUCKET_NAME = 'keith_speech_to_text'
 storage_client = storage.Client()
 bucket = storage_client.bucket(BUCKET_NAME)
 
+# Print all environment variables when the app starts
+print("Starting Flask App with the following environment variables:")
+for key, value in os.environ.items():
+    print(f"{key}: {value}")
+
 def download_audio(url):
     # Create a temporary local path for initial download
     temp_file = f'/app/tmp/{uuid.uuid4()}.wav'
@@ -111,5 +116,6 @@ def download_audio_endpoint():
             "traceback": traceback.format_exc()
         }, 500
 
+# Only with python app.py
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
