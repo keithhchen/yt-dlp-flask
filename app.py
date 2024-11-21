@@ -72,11 +72,15 @@ def download_audio(url):
         current_app.logger.error(traceback.format_exc())
         raise  # Re-raise the exception to be handled by the endpoint
         
-    # finally:
-    #     # Clean up temp file
-    #     if os.path.exists(temp_file):
-    #         os.remove(temp_file)
-    #         current_app.logger.info(f"Cleaned up temp file: {temp_file}")
+    finally:
+        # Clean up temp files
+        for file_path in [temp_file, f"{temp_file}.wav"]:
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    current_app.logger.info(f"Cleaned up temp file: {file_path}")
+                except Exception as e:
+                    current_app.logger.error(f"Error cleaning up {file_path}: {str(e)}")
 
 @app.route('/download-audio', methods=['GET'])
 def download_audio_endpoint():
