@@ -17,8 +17,8 @@ RUN mkdir -p /app/tmp && chmod 777 /app/tmp
 COPY requirements.txt .
 
 # Google Cloud credentials
-COPY credentials.json /app/credentials.json
-ENV GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
+# COPY credentials.json /app/credentials.json
+# ENV GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of your application code to the container
