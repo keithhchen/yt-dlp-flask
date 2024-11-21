@@ -116,6 +116,45 @@ def download_audio_endpoint():
             "traceback": traceback.format_exc()
         }, 500
 
+def test_gcs_connection():
+    try:
+        # List a few blobs to test connection
+        blobs = list(bucket.list_blobs(max_results=1))
+        
+        # Try to create and delete a test blob
+        test_blob = bucket.blob('test-connection/test.txt')
+        test_blob.upload_from_string('Test connection successful')
+        test_blob.delete()
+        
+        return {
+            "status": "success",
+            "bucket": BUCKET_NAME,
+            "connection": "verified",
+            "existing_files": len(blobs)
+        }
+    except Exception as e:
+        current_app.logger.error(f"GCS Connection error: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+@app.route('/test-connection', methods=['GET'])
+def test_connection_endpoint():
+    try:
+        result = test_gcs_connection()
+        if "error" in result.get("status", ""):
+            return result, 500
+        return result
+    except Exception as e:
+        current_app.logger.error(f"Test connection endpoint error: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }, 500
+
 # Only with python app.py
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
