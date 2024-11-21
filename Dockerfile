@@ -30,7 +30,7 @@ EXPOSE 5000
 # Set environment variables for Flask
 ARG FLASK_ENV=production
 ENV FLASK_ENV=${FLASK_ENV}
-ENV FLASK_APP=app
+ENV FLASK_APP=main.py
 
 # Command to run the application
 CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
