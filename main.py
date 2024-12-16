@@ -3,7 +3,7 @@ from flask import Flask, request, current_app
 from google.cloud import storage, speech
 import traceback
 from datetime import timedelta
-from youtube_utils import get_youtube_video_metadata, download_audio, transcribe_audio_with_diarization, test_gcs_connection
+from youtube_utils import get_youtube_video_metadata, download_audio, transcribe_audio_with_diarization, test_gcs_connection, download_youtube_transcription
 
 app = Flask(__name__)
 
@@ -16,19 +16,22 @@ print("Starting Flask App with the following environment variables:")
 for key, value in os.environ.items():
     print(f"{key}: {value}")
 
-@app.route('/download-audio', methods=['GET'])
+@app.route('/audio', methods=['GET'])
 def download_audio_endpoint():
     """下载音频的端点，从视频 URL 返回签名 URL 和转录文本。"""
     video_url = request.args.get('url')
-    language_code = request.args.get('lang', 'en-US') # en-US, zh-CN
+    language_code = request.args.get('lang', 'en-US')  # en-US, zh-CN
     
     if not video_url:
         return {"error": "No URL provided"}, 400
     
-    try:
+    def fetch_metadata_and_audio():
+        metadata = get_youtube_video_metadata(video_url)
         signed_url = download_audio(video_url)
-        if not signed_url:
-            return {"error": "Failed to generate download URL"}, 500
+        return metadata, signed_url
+
+    try:
+        metadata, signed_url = fetch_metadata_and_audio()
         
         # Extract the blob name from the signed URL
         blob_name = signed_url.split('/')[-1].split('?')[0]
@@ -41,7 +44,14 @@ def download_audio_endpoint():
             "download_url": signed_url,
             "gcs_uri": gcs_uri,
             "formatted_transcript": transcript['formatted_transcript'],
-            "raw_results": transcript['raw_results']
+            "raw_results": transcript['raw_results'],
+            "title": metadata['title'],
+            "description": metadata['description'],
+            "thumbnails": metadata['thumbnails'],
+            "channel_title": metadata['channel_title'],
+            "published_at": metadata['published_at'],
+            "tags": metadata['tags'],
+            "language": metadata['language']
         }
     
     except Exception as e:

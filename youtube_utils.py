@@ -22,6 +22,7 @@ def load_api_key(api_key_name):
         credentials = json.load(f)
     return credentials.get(api_key_name)
 
+
 def download_audio(url):
     """从给定的 URL 下载音频并将其上传到 Google Cloud Storage。"""
     # Create a temporary local path for initial download
@@ -198,7 +199,7 @@ def test_gcs_connection():
         }
     
 def get_youtube_video_metadata(video_url):
-    """使用 YouTube Data API 获取视频元数据，包括标题、是否包含转录和语言。"""
+    """使用 YouTube Data API 获取视频元数据，包括标题、描述、缩略图、频道标题、发布时间、标签和是否包含转录。"""
     # Parse the URL and extract the video ID from the query parameters
     parsed_url = urlparse(video_url)
     video_id = parse_qs(parsed_url.query).get('v')
@@ -211,7 +212,7 @@ def get_youtube_video_metadata(video_url):
     # Load the API key
     api_key = load_api_key("youtube_api_key")
     url = f"https://www.googleapis.com/youtube/v3/videos?id={video_id}&key={api_key}&part=snippet,contentDetails"
-    
+
     try:
         response = requests.get(url)
         response.raise_for_status()  # Raise an error for bad responses
@@ -224,18 +225,50 @@ def get_youtube_video_metadata(video_url):
 
         video_info = data['items'][0]
         title = video_info['snippet'].get('title', 'Unknown Title')
-        language = video_info['snippet'].get('defaultAudioLanguage', 'Unknown Language')
-        
-        # Check if the video has captions (transcriptions)
-        has_transcription = 'caption' in video_info['contentDetails'] and video_info['contentDetails']['caption'] == 'true'
+        description = video_info['snippet'].get('description', 'No description available.')
+        thumbnails = video_info['snippet'].get('thumbnails', {})
+        channel_title = video_info['snippet'].get('channelTitle', 'Unknown Channel')
+        published_at = video_info['snippet'].get('publishedAt', 'Unknown Publish Date')
+        tags = video_info['snippet'].get('tags', [])
 
         return {
             'title': title,
-            'has_transcription': has_transcription,
-            'language': language
+            'description': description,
+            'thumbnails': thumbnails,
+            'channel_title': channel_title,
+            'published_at': published_at,
+            'tags': tags,
+            'language': video_info['snippet'].get('defaultAudioLanguage', 'Unknown Language'),
         }
     except Exception as e:
         current_app.logger.error(f"Error retrieving metadata for video URL {video_url}: {str(e)}")
         return {
             'error': str(e)
         }
+
+def download_youtube_transcription(video_url):
+    """使用 yt-dlp 下载 YouTube 视频的转录文本。"""
+    ydl_opts = {
+        'skip_download': True,  # We only want the subtitles, not the video
+        'writesubtitles': True,  # Write subtitles to a file
+        'subtitlesformat': 'srt',  # You can change this to 'json' or other formats if needed
+        'outtmpl': '/app/tmp/%(id)s.%(ext)s',  # Temporary path for subtitles
+        'subtitleslangs': ['en', 'zh'],  # Specify the languages you want
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(video_url, download=False)
+            subtitles = info_dict.get('subtitles', {})
+            if not subtitles:
+                return {"error": "No subtitles available for this video."}
+
+            # Assuming we want English subtitles, you can adjust as needed
+            if 'en' in subtitles:
+                subtitle_url = subtitles['en'][0]['url']
+                return requests.get(subtitle_url).text  # Download the subtitle text
+            else:
+                return {"error": "English subtitles not available."}
+    except Exception as e:
+        current_app.logger.error(f"Error downloading transcription: {str(e)}")
+        return {"error": str(e)}
