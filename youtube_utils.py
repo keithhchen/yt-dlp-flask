@@ -1,4 +1,4 @@
-# audio_utils.py
+# youtube_utils.py
 
 import os
 import uuid
@@ -11,6 +11,8 @@ import re
 from urllib.parse import urlparse, parse_qs
 import json
 import requests
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.formatters import TextFormatter
 
 BUCKET_NAME = 'keith_speech_to_text'
 storage_client = storage.Client()
@@ -31,7 +33,7 @@ def load_api_key(api_key_name):
 def download_audio(url):
     """从给定的 URL 下载音频并将其上传到 Google Cloud Storage。"""
     # Create a temporary local path for initial download
-    temp_file = f'/app/tmp/{uuid.uuid4()}'
+    temp_file = f'/app/tmp/{uuid.uuid4()}-192'
     
     current_app.logger.info(f"Attempting to download: {url}")
     current_app.logger.info(f"Temp file path: {temp_file}")
@@ -171,7 +173,7 @@ def transcribe_audio_with_diarization(gcs_uri, language_code="en-US"):
 
     return {
         'formatted_transcript': "\n".join(transcript_lines),
-        'raw_results': raw_results
+        'raw_transcript': raw_results
     }
 
 def format_timestamp(seconds):
@@ -204,7 +206,7 @@ def test_gcs_connection():
         }
     
 def get_youtube_video_metadata(video_url):
-    """使用 YouTube Data API 获取视频元数据，包括��题、描述、缩略图、频道标题、发布时间、标签和是否包含转录。"""
+    """使用 YouTube Data API 获取视频元数据，包括题、描述、缩略图、频道标题、发布时间、标签和是否包含转录。"""
     # Parse the URL and extract the video ID from the query parameters
     parsed_url = urlparse(video_url)
     video_id = parse_qs(parsed_url.query).get('v')
@@ -251,29 +253,30 @@ def get_youtube_video_metadata(video_url):
             'error': str(e)
         }
 
-def download_youtube_transcription(video_url):
-    """使用 yt-dlp 下载 YouTube 视频的转录文本。"""
-    ydl_opts = {
-        'skip_download': True,  # We only want the subtitles, not the video
-        'writesubtitles': True,  # Write subtitles to a file
-        'subtitlesformat': 'srt',  # You can change this to 'json' or other formats if needed
-        'outtmpl': '/app/tmp/%(id)s.%(ext)s',  # Temporary path for subtitles
-        'subtitleslangs': ['en', 'zh'],  # Specify the languages you want
-    }
+def get_youtube_transcript(video_url):
+    """使用 youtube-transcript-api 获取 YouTube 视频的转录文本。"""
+    # Parse the URL and extract the video ID from the query parameters
+    parsed_url = urlparse(video_url)
+    video_id = parse_qs(parsed_url.query).get('v')
+
+    if not video_id or not video_id[0]:
+        return {'error': 'Invalid YouTube URL'}
+
+    video_id = video_id[0]  # Get the first video ID from the list
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(video_url, download=False)
-            subtitles = info_dict.get('subtitles', {})
-            if not subtitles:
-                return {"error": "No subtitles available for this video."}
+        # Fetch the transcript
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        
+        # Optionally format the transcript
+        formatter = TextFormatter()
+        formatted_transcript = formatter.format_transcript(transcript)
 
-            # Assuming we want English subtitles, you can adjust as needed
-            if 'en' in subtitles:
-                subtitle_url = subtitles['en'][0]['url']
-                return requests.get(subtitle_url).text  # Download the subtitle text
-            else:
-                return {"error": "English subtitles not available."}
+        return {
+            'formatted_transcript': formatted_transcript,
+            'raw_transcript': transcript
+        }
     except Exception as e:
-        current_app.logger.error(f"Error downloading transcription: {str(e)}")
-        return {"error": str(e)}
+        return {
+            'error': str(e)
+        }
