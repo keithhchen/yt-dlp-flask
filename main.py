@@ -1,9 +1,12 @@
 import os
-from flask import Flask, request, current_app
+from flask import Flask, request, current_app, jsonify
 from google.cloud import storage, speech
 import traceback
 from datetime import timedelta
 from youtube_utils import get_youtube_video_metadata, download_audio, transcribe_audio_with_diarization, test_gcs_connection, get_youtube_transcript
+import db
+from datetime import datetime  # Import the datetime module
+
 
 app = Flask(__name__)
 
@@ -122,6 +125,45 @@ def video_transcript_endpoint():
     """获取 YouTube 视频的转录文本。"""
     video_url = request.args.get('url')
     return get_youtube_transcript(video_url)
+
+@app.route('/create-document', methods=['POST'])
+def create_document_endpoint():
+    """Endpoint to create a document vector from the provided text."""
+    # Extract "text" from the POST body
+    data = request.get_json()  # Get the JSON data from the request
+    content = data.get('content')  # Extract the "text" field
+    title = data.get('title')  # Extract the "text" field
+    metadata = data.get('metadata', {})  # Use an empty dict if metadata is not provided
+
+    if not content:
+        return {'error': 'Content is required'}, 400 
+
+    if not title:
+        return {'error': 'Title is required'}, 400 
+
+    document = {
+        "title": title,
+        "content": content,
+        "metadata": metadata,
+        "timestamp": datetime.now()
+    }
+    # Call the create_document_vector function with the extracted text
+    document_vector = db.create_document_vector(title, content)
+    vector_id = document_vector['document']['id']
+    # Check for errors in the response
+    if 'error' in document_vector:
+        return {
+                "error": str(document_vector),
+                "traceback": traceback.format_exc()
+            }, 500
+    current_app.logger.info(f'Vector ID: {vector_id}')
+    # Save to Firestore and return the document ID
+    db_id = db.create_document_db(document)
+    current_app.logger.info(f'Database ID: {db_id}')
+    return {
+        "document": document, 
+        "db_id": db_id
+    }
 
 # Only with python app.py
 if __name__ == '__main__':

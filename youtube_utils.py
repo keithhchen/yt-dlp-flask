@@ -13,22 +13,11 @@ import json
 import requests
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter
+from utils import load_api_key
 
 BUCKET_NAME = 'keith_speech_to_text'
 storage_client = storage.Client()
 bucket = storage_client.bucket(BUCKET_NAME)
-
-def load_api_key(api_key_name):
-    credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-    if not credentials_path:
-        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable is not set.")
-    
-    # Load the JSON credentials file
-    with open(credentials_path, 'r') as file:
-        credentials = json.load(file)
-    
-    return credentials.get(api_key_name)
-
 
 def download_audio(url):
     """从给定的 URL 下载音频并将其上传到 Google Cloud Storage。"""
@@ -206,7 +195,7 @@ def test_gcs_connection():
         }
     
 def get_youtube_video_metadata(video_url):
-    """使用 YouTube Data API 获取视频元数据，包括题、描述、缩略图、频道标题、发布时间、标签和是否包含转录。"""
+    """使用 YouTube Data API 获取视频元数据包括题、描述、缩略图、频道标题、发布时间、标签和是否包含转录。"""
     # Parse the URL and extract the video ID from the query parameters
     parsed_url = urlparse(video_url)
     video_id = parse_qs(parsed_url.query).get('v')
