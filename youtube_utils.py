@@ -15,6 +15,20 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter
 from utils import load_api_key
 
+class CustomTextFormatter(TextFormatter):
+    def format_transcript(self, transcript):
+        formatted_lines = []
+        for entry in transcript:
+            start_time = entry['start']
+            text = entry['text'].replace('\n', ' ').strip()  # Clean up text
+            # Convert start time to mm:ss format
+            minutes = int(start_time // 60)
+            seconds = int(start_time % 60)
+            formatted_time = f"[{minutes:02}:{seconds:02}]"
+            formatted_lines.append(f"{formatted_time} {text}")
+        
+        return "\n".join(formatted_lines)
+
 BUCKET_NAME = 'keith_speech_to_text'
 storage_client = storage.Client()
 bucket = storage_client.bucket(BUCKET_NAME)
@@ -36,7 +50,7 @@ def download_audio(url):
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'wav',
-            'preferredquality': '192',
+            'preferredquality': '64',
         }],
         'postprocessor_args': [
             '-ar', '16000',
@@ -95,7 +109,7 @@ def download_audio(url):
                 except Exception as e:
                     current_app.logger.error(f"Error cleaning up {file_path}: {str(e)}")
 
-def transcribe_audio_with_diarization(gcs_uri, language_code="en-US"):
+def transcribe_audio_with_diarization(gcs_uri):
     """对音频进行转录，带有说话者区分和时间戳。"""
     
     current_app.logger.info(f"Starting transcription for: {gcs_uri}")
@@ -104,9 +118,9 @@ def transcribe_audio_with_diarization(gcs_uri, language_code="en-US"):
     
     config = speech.RecognitionConfig(
         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-        language_code=language_code,
         enable_automatic_punctuation=True,
         enable_word_time_offsets=True,
+        enable_automatic_language_detection=True,
         diarization_config=speech.SpeakerDiarizationConfig(
             enable_speaker_diarization=True,
             min_speaker_count=2,
@@ -258,7 +272,7 @@ def get_youtube_transcript(video_url):
         transcript = YouTubeTranscriptApi.get_transcript(video_id)
         
         # Optionally format the transcript
-        formatter = TextFormatter()
+        formatter = CustomTextFormatter()
         formatted_transcript = formatter.format_transcript(transcript)
 
         return {

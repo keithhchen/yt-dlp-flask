@@ -1,11 +1,11 @@
 import os
+import json
 from flask import Flask, request, current_app, jsonify
-from google.cloud import storage, speech
+from google.cloud import storage
 import traceback
-from datetime import timedelta
 from youtube_utils import get_youtube_video_metadata, download_audio, transcribe_audio_with_diarization, test_gcs_connection, get_youtube_transcript
 import db
-from datetime import datetime  # Import the datetime module
+from datetime import datetime
 
 
 app = Flask(__name__)
@@ -27,7 +27,7 @@ def audio_file_endpoint():
 
 @app.route('/v', methods=['GET'])
 def download_audio_endpoint():
-    """下载音频的端点，从视频 URL 返回转录文本和其他食品信息。"""
+    """下载音频的端点，从视频 URL 返回转录文本和其他视频信息。"""
     video_url = request.args.get('url')
     language_code = request.args.get('lang', 'en-US')  # en-US, zh-CN
     
@@ -94,13 +94,12 @@ def test_connection_endpoint():
 def transcribe_endpoint():
     """从给定的 Google Cloud Storage URI 转录音频的端点。"""
     gcs_uri = request.args.get('gcs_uri')
-    language_code = request.args.get('lang', 'en-US')
     
     if not gcs_uri:
         return {"error": "No GCS URI provided"}, 400
         
     try:
-        result = transcribe_audio_with_diarization(gcs_uri, language_code)
+        result = transcribe_audio_with_diarization(gcs_uri)
         return result
     except Exception as e:
         current_app.logger.error(f"Transcription endpoint error: {str(e)}")
@@ -133,7 +132,14 @@ def create_document_endpoint():
     data = request.get_json()  # Get the JSON data from the request
     content = data.get('content')  # Extract the "text" field
     title = data.get('title')  # Extract the "text" field
+    llm_processed = data.get('llm_processed', '')
     metadata = data.get('metadata', {})  # Use an empty dict if metadata is not provided
+    if isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata)  # Attempt to parse the JSON string into a dictionary
+        except json.JSONDecodeError:
+            pass  # Keep metadata as is if parsing fails
+    user_id = data.get('user_id', 0)
 
     if not content:
         return {'error': 'Content is required'}, 400 
@@ -143,8 +149,10 @@ def create_document_endpoint():
 
     document = {
         "title": title,
+        "user_id": user_id,
         "content": content,
         "metadata": metadata,
+        "llm_processed": llm_processed,
         "timestamp": datetime.now()
     }
     # Call the create_document_vector function with the extracted text
