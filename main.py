@@ -57,7 +57,7 @@ def download_audio_endpoint():
             "download_url": signed_url,
             "gcs_uri": gcs_uri,
             "formatted_transcript": transcription_result['formatted_transcript'],
-            "raw_transcript": transcription_result['raw_transcript'],
+            # "raw_transcript": transcription_result['raw_transcript'],
             "title": metadata['title'],
             "description": metadata['description'],
             "thumbnails": metadata['thumbnails'],
