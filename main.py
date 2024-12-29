@@ -129,7 +129,7 @@ def video_transcript_endpoint():
 def create_document_endpoint():
     """Endpoint to create a document vector from the provided text."""
     # Extract "text" from the POST body
-    data = request.get_json()  # Get the JSON data from the request
+    data = request.form  # Get the JSON data from the request
     content = data.get('content')  # Extract the "text" field
     title = data.get('title')  # Extract the "text" field
     llm_processed = data.get('llm_processed', '')
