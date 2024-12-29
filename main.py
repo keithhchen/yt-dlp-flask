@@ -49,7 +49,7 @@ def download_audio_endpoint():
             gcs_uri = f'gs://{BUCKET_NAME}/audio/{blob_name}'
             
             # Generate transcription
-            transcription_result = transcribe_audio_with_diarization(gcs_uri, language_code)
+            transcription_result = transcribe_audio_with_diarization(gcs_uri)
         else:
             current_app.logger.info("Found native transcripts")
             
