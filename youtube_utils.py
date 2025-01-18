@@ -282,7 +282,8 @@ def get_youtube_transcript(video_url):
     try:
         # Only use proxy in non-local environments
         if os.environ.get('FLASK_ENV') != 'development':
-            proxy_url = load_api_key("proxy")[0]
+            # proxy_url = load_api_key("proxy")[0]
+            proxy_url = "http://v-Hix6x31h73GUtcIHRHRg:@smartproxy.crawlbase.com:8012"
             proxies = {"http": proxy_url, "https": proxy_url}
             transcript = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
         else:
