@@ -11,9 +11,22 @@ import re
 from urllib.parse import urlparse, parse_qs
 import json
 import requests
+from urllib3.exceptions import InsecureRequestWarning
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter
 from utils import load_api_key
+
+# Disable SSL verification warnings
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+
+# Monkey patch the session to disable SSL verification
+old_session = requests.Session
+class NoVerifySession(old_session):
+    def __init__(self):
+        super().__init__()
+        self.verify = False
+
+requests.Session = NoVerifySession
 
 class CustomTextFormatter(TextFormatter):
     def format_transcript(self, transcript):
