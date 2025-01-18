@@ -92,21 +92,44 @@ def test_connection_endpoint():
 
 @app.route('/transcribe', methods=['GET'])
 def transcribe_endpoint():
-    """从给定的 Google Cloud Storage URI 转录音频的端点。"""
-    gcs_uri = request.args.get('gcs_uri')
+    """从视频 URL 返回官方字幕或转录文本"""
+    video_url = request.args.get('url')
     
-    if not gcs_uri:
-        return {"error": "No GCS URI provided"}, 400
-        
+    if not video_url:
+        return {"error": "No URL provided"}, 400
+    
     try:
-        result = transcribe_audio_with_diarization(gcs_uri)
-        return result
+        transcription_result = get_youtube_transcript(video_url)
+
+        signed_url = ""
+        gcs_uri = ""
+        
+        if 'error' in transcription_result:
+            current_app.logger.info("Transcribing from audio")
+            signed_url = download_audio(video_url)
+            # Extract the blob name from the signed URL
+            blob_name = signed_url.split('/')[-1].split('?')[0]
+            gcs_uri = f'gs://{BUCKET_NAME}/audio/{blob_name}'
+            
+            # Generate transcription
+            transcription_result = transcribe_audio_with_diarization(gcs_uri)
+        else:
+            current_app.logger.info("Found native transcripts")
+            
+        return {
+            "download_url": signed_url,
+            "gcs_uri": gcs_uri,
+            "formatted_transcript": transcription_result['formatted_transcript'],
+            # "raw_transcript": transcription_result['raw_transcript'],
+        }
+    
     except Exception as e:
-        current_app.logger.error(f"Transcription endpoint error: {str(e)}")
+        current_app.logger.error(f"Endpoint error: {str(e)}")
         return {
             "error": str(e),
             "traceback": traceback.format_exc()
         }, 500
+
 
 @app.route('/video-metadata', methods=['GET'])
 def video_metadata_endpoint():
