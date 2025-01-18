@@ -12,6 +12,7 @@ from urllib.parse import urlparse, parse_qs
 import json
 import requests
 from urllib3.exceptions import InsecureRequestWarning
+from types import MethodType
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter
 from utils import load_api_key
@@ -19,14 +20,12 @@ from utils import load_api_key
 # Disable SSL verification warnings
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
-# Monkey patch the session to disable SSL verification
-old_session = requests.Session
-class NoVerifySession(old_session):
-    def __init__(self):
-        super().__init__()
-        self.verify = False
-
-requests.Session = NoVerifySession
+class NoSSLTranscriptApi(YouTubeTranscriptApi):
+    @classmethod
+    def _initialize_http_handler(cls):
+        session = requests.Session()
+        session.verify = False
+        return session
 
 class CustomTextFormatter(TextFormatter):
     def format_transcript(self, transcript):
@@ -279,21 +278,23 @@ def get_youtube_transcript(video_url):
         return {'error': 'Invalid YouTube URL'}
 
     video_id = video_id[0]  # Get the first video ID from the list
-
+    
     try:
-        # Fetch the transcript
-        proxy_url = "http://v-Hix6x31h73GUtcIHRHRg:@smartproxy.crawlbase.com:8012"
-        proxies = {"http": proxy_url, "https": proxy_url}
+        # Only use proxy in non-local environments
+        if os.environ.get('FLASK_ENV') != 'development':
+            proxy_url = load_api_key("proxy")[0]
+            proxies = {"http": proxy_url, "https": proxy_url}
+            transcript = NoSSLTranscriptApi.get_transcript(video_id, proxies=proxies)
+        else:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id)
 
-        transcript = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
-        
         # Optionally format the transcript
         formatter = CustomTextFormatter()
         formatted_transcript = formatter.format_transcript(transcript)
 
         return {
             'formatted_transcript': formatted_transcript,
-            'raw_transcript': transcript
+            # 'raw_transcript': transcript
         }
     except Exception as e:
         return {
