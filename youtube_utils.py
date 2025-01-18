@@ -269,7 +269,10 @@ def get_youtube_transcript(video_url):
 
     try:
         # Fetch the transcript
-        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        proxy_url = "http://v-Hix6x31h73GUtcIHRHRg:@smartproxy.crawlbase.com:8012"
+        proxies = {"http": proxy_url, "https": proxy_url}
+
+        transcript = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
         
         # Optionally format the transcript
         formatter = CustomTextFormatter()
@@ -281,5 +284,6 @@ def get_youtube_transcript(video_url):
         }
     except Exception as e:
         return {
-            'error': str(e)
+            'error': str(e),
+            'traceback': traceback.format_exc()
         }
