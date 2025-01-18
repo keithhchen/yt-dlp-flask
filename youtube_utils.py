@@ -12,7 +12,6 @@ from urllib.parse import urlparse, parse_qs
 import json
 import requests
 from urllib3.exceptions import InsecureRequestWarning
-from types import MethodType
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter
 from utils import load_api_key
@@ -20,13 +19,14 @@ from utils import load_api_key
 # Disable SSL verification warnings
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
-class NoSSLTranscriptApi(YouTubeTranscriptApi):
-    @classmethod
-    def _initialize_http_handler(cls):
-        session = requests.Session()
-        session.verify = False
-        return session
+# Monkey patch the session to disable SSL verification
+old_session = requests.Session
+class NoVerifySession(old_session):
+    def __init__(self):
+        super().__init__()
+        self.verify = False
 
+requests.Session = NoVerifySession
 class CustomTextFormatter(TextFormatter):
     def format_transcript(self, transcript):
         formatted_lines = []
@@ -284,7 +284,7 @@ def get_youtube_transcript(video_url):
         if os.environ.get('FLASK_ENV') != 'development':
             proxy_url = load_api_key("proxy")[0]
             proxies = {"http": proxy_url, "https": proxy_url}
-            transcript = NoSSLTranscriptApi.get_transcript(video_id, proxies=proxies)
+            transcript = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
         else:
             transcript = YouTubeTranscriptApi.get_transcript(video_id)
 
