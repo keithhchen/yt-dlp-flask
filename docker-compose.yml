@@ -12,7 +12,8 @@ services:
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
 
-  app_dev:
+  app_dev: # dev
+    container_name: yt
     build:
       context: .
       dockerfile: Dockerfile
@@ -26,3 +27,9 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
       - FLASK_ENV=development
       - FLASK_DEBUG=1
+    networks:
+      - custom_network
+
+networks:
+  custom_network:
+    external: true

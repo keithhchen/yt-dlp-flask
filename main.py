@@ -25,6 +25,10 @@ def audio_file_endpoint():
     video_url = request.args.get('url')
     return download_audio(video_url)
 
+@app.route('/', methods=['GET'])
+def index():
+    return "hello"
+
 @app.route('/v', methods=['GET'])
 def download_audio_endpoint():
     """下载音频的端点，从视频 URL 返回转录文本和其他视频信息。"""
